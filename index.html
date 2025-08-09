@@ -74,7 +74,12 @@
 
       try {
         await fetch('/', { method: 'POST', body: new FormData(nf) });
-        // Redirect to a thank-you page (create thank-you.html once)
+// Remove the redirect to a page that doesn’t exist
+// window.location.href = '/thank-you.html';
+
+// Show a simple success message
+alert('Thanks! We received your enquiry.');
+
         window.location.href = '/thank-you.html';
       } catch (err) {
         alert('Sorry, something went wrong. Please try again in a moment.');

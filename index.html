@@ -74,6 +74,40 @@
         // Use the static hidden Netlify form declared above
         const nf = document.querySelector('form[name="enquiry"]');
 
+        // Create/ensure a status area above the visible form
+        function ensureStatusArea() {
+          const formEl = container.querySelector('form');
+          let host = container.querySelector('.enquiry-status');
+          if (!host) {
+            host = document.createElement('div');
+            host.className = 'enquiry-status';
+            host.setAttribute('aria-live', 'polite');
+            if (formEl && formEl.parentNode) {
+              formEl.parentNode.insertBefore(host, formEl);
+            } else {
+              container.insertBefore(host, container.firstChild);
+            }
+          }
+          return host;
+        }
+
+        function showBanner(type, text) {
+          const host = ensureStatusArea();
+          const bg = type === 'success' ? '#ecfdf5' : '#fef2f2';
+          const border = type === 'success' ? '#86efac' : '#fca5a5';
+          const icon = type === 'success' ? '✅' : '⚠️';
+          const el = document.createElement('div');
+          el.style.cssText = `
+            padding:12px;margin:0 0 12px 0;border-radius:8px;
+            background:${bg};border:1px solid ${border};font-size:16px
+          `;
+          el.textContent = `${icon} ${text}`;
+          host.innerHTML = '';
+          host.appendChild(el);
+          // Auto-fade after a bit
+          setTimeout(() => { if (host.contains(el)) host.removeChild(el); }, 7000);
+        }
+
         function setSendingState() {
           btn.disabled = true;
           btn.style.opacity = '0.8';
@@ -111,7 +145,7 @@
           };
 
           if (!vals.name || !vals.email) {
-            alert('Please add your name and email.');
+            showBanner('error', 'Please add your name and email.');
             return;
           }
 
@@ -122,20 +156,20 @@
           });
 
           try {
-            // Immediate visual feedback
             setSendingState();
 
             await fetch('/', { method: 'POST', body: new FormData(nf) });
 
-            // Small delay for nicer feel, then swap to confirmation
-            setTimeout(() => {
-              const target = container.querySelector('form') || container;
-              target.innerHTML = '<p style="padding:12px;border-radius:8px;background:#ecfdf5;border:1px solid #86efac;">✅ Thanks! We’ll be in touch within one business day.</p>';
-            }, 400);
+            resetButton();
+            // Clear only the message so they can send another quickly
+            if (msgEl) msgEl.value = '';
+            msgEl?.focus();
+
+            showBanner('success', 'Thanks! Your message was sent.');
           } catch (err) {
             console.error(err);
-            alert('Sorry, something went wrong. Please try again.');
             resetButton();
+            showBanner('error', 'Sorry, something went wrong. Please try again.');
           }
         }
 

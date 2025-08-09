@@ -11,8 +11,9 @@
     <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 bg-white border px-3 py-2 rounded-md shadow">Skip to content</a>
     <div id="root"></div>
 <script>
+<script>
 (function () {
-  // Wait for the SPA UI to render (poll up to ~6s)
+  // Poll until the SPA renders the black "Send enquiry" button
   function waitForButton() {
     const btn = [...document.querySelectorAll('button, input[type="submit"]')]
       .find(el => (el.textContent || el.value || '').trim().toLowerCase() === 'send enquiry');
@@ -20,9 +21,13 @@
     hookUp(btn);
   }
 
-  function hookUp(sendBtn) {
-    // Find a container around the button to scope our inputs
-    let container = sendBtn;
+  function hookUp(btn) {
+    // Stop native form submits / redirects
+    btn.setAttribute('type', 'button');
+    btn.closest('form')?.addEventListener('submit', e => e.preventDefault());
+
+    // Find inputs near the button
+    let container = btn;
     for (let i = 0; i < 6 && container; i++) {
       container = container.parentElement;
       if (container && container.querySelectorAll('input, textarea').length >= 3) break;
@@ -30,8 +35,6 @@
     if (!container) container = document;
 
     const q = s => container.querySelector(s);
-
-    // Prefer semantic selectors, fall back by position
     const inputs = [...container.querySelectorAll('input, textarea')];
 
     const nameEl   = q('input[placeholder*="name" i]')   || inputs[0];
@@ -40,11 +43,12 @@
     const suburbEl = q('input[placeholder*="suburb" i]') || inputs[3];
     const msgEl    = q('textarea') || inputs.find(x => x.tagName === 'TEXTAREA');
 
-    // Build a hidden Netlify form
+    // Hidden Netlify form
     const nf = document.createElement('form');
     nf.name = 'enquiry';
     nf.method = 'POST';
     nf.setAttribute('data-netlify', 'true');
+    nf.style.display = 'none';
     nf.innerHTML = `
       <input type="hidden" name="form-name" value="enquiry">
       <input name="name">
@@ -53,11 +57,11 @@
       <input name="suburb">
       <textarea name="message"></textarea>
     `;
-    nf.style.display = 'none';
     document.body.appendChild(nf);
 
+    // Submit handler
     async function submitToNetlify(e) {
-      e.preventDefault();
+      e?.preventDefault?.();
 
       const vals = {
         name:   nameEl?.value?.trim()   || '',
@@ -67,6 +71,7 @@
         message: msgEl?.value?.trim()   || '',
       };
 
+      // Fill hidden form
       Object.entries(vals).forEach(([k, v]) => {
         const el = nf.querySelector(`[name="${k}"]`);
         if (el) el.value = v;
@@ -74,21 +79,17 @@
 
       try {
         await fetch('/', { method: 'POST', body: new FormData(nf) });
-// Remove the redirect to a page that doesn’t exist
-// window.location.href = '/thank-you.html';
-
-// Show a simple success message
-alert('Thanks! We received your enquiry.');
-
-        window.location.href = '/thank-you.html';
+        // Replace the visible form area with a nice confirmation
+        const target = container.querySelector('form') || container;
+        target.innerHTML = '<p style="padding:12px;border-radius:8px;background:#ecfdf5;border:1px solid #86efac;">✅ Thanks! We’ll be in touch within one business day.</p>';
       } catch (err) {
-        alert('Sorry, something went wrong. Please try again in a moment.');
+        alert('Sorry, something went wrong. Please try again.');
         console.error(err);
       }
     }
 
-    // Handle both button clicks and Enter key inside fields
-    sendBtn.addEventListener('click', submitToNetlify);
+    // Click + Enter key submit
+    btn.addEventListener('click', submitToNetlify);
     container.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
         submitToNetlify(e);
@@ -96,12 +97,10 @@ alert('Thanks! We received your enquiry.');
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', waitForButton);
-  } else {
-    waitForButton();
-  }
+  // Kick things off
+  waitForButton();
 })();
+
 </script>
 
   </body>

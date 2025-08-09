@@ -10,6 +10,7 @@
   <body class="min-h-screen bg-white">
     <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 bg-white border px-3 py-2 rounded-md shadow">Skip to content</a>
     <div id="root"></div>
+<div id="cough-guard"></div>
 
     <!-- Static hidden Netlify form so it's picked up at build time -->
     <form name="enquiry" method="POST" data-netlify="true" netlify-honeypot="bot-field" style="display:none;">
@@ -185,5 +186,37 @@
       waitForButton();
     })();
     </script>
+    <script src="assets/coughguard.js"></script>
+    <script>
+/* Add “Cough Guard” link to the nav after “NDIS” once your app renders */
+(function addCoughGuardNavLink(){
+  function tryInsert(){
+    // Find the NDIS link anywhere on the page
+    const ndis = Array.from(document.querySelectorAll('a'))
+      .find(a => (a.textContent || '').trim().toLowerCase() === 'ndis');
+    if (!ndis) return setTimeout(tryInsert, 300); // wait for SPA to render
+
+    // Build the new link
+    const link = document.createElement('a');
+    link.href = '#cough-guard';
+    link.textContent = 'Cough Guard';
+
+    // If your menu uses <li> items, match that structure
+    const li = ndis.closest('li');
+    if (li && li.parentElement) {
+      const newLi = document.createElement('li');
+      newLi.appendChild(link);
+      li.parentElement.insertBefore(newLi, li.nextSibling);
+    } else if (ndis.parentElement) {
+      // Fallback: just place it next to the NDIS link
+      const sep = document.createTextNode(' ');
+      ndis.parentElement.insertBefore(sep, ndis.nextSibling);
+      ndis.parentElement.insertBefore(link, sep.nextSibling);
+    }
+  }
+  tryInsert();
+})();
+</script>
+
   </body>
 </html>

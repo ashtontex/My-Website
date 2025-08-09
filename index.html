@@ -10,20 +10,60 @@
   <body class="min-h-screen bg-white">
     <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 bg-white border px-3 py-2 rounded-md shadow">Skip to content</a>
     <div id="root"></div>
- <form name="enquiry" method="POST" data-netlify="true">
-  <input type="hidden" name="form-name" value="enquiry" />
-  <p>
-    <label>Name <input type="text" name="name" required></label>
-  </p>
-  <p>
-    <label>Email <input type="email" name="email" required></label>
-  </p>
-  <p>
-    <label>Message <textarea name="message" required></textarea></label>
-  </p>
-  <p>
-    <button type="submit">Send enquiry</button>
-  </p>
-</form>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Find the black "Send enquiry" button
+  const sendBtn = [...document.querySelectorAll('button, input[type="submit"]')]
+    .find(el => (el.textContent || el.value || '').trim().toLowerCase() === 'send enquiry');
+  if (!sendBtn) return;
+
+  // Hidden Netlify form
+  const nf = document.createElement('form');
+  nf.name = 'enquiry';
+  nf.method = 'POST';
+  nf.setAttribute('data-netlify', 'true');
+  nf.style.display = 'none';
+  nf.innerHTML = `
+    <input type="hidden" name="form-name" value="enquiry">
+    <input type="text"   name="name">
+    <input type="email"  name="email">
+    <input type="text"   name="phone">
+    <input type="text"   name="suburb">
+    <textarea name="message"></textarea>
+  `;
+  document.body.appendChild(nf);
+
+  sendBtn.addEventListener('click', async (e) => {
+    e.preventDefault(); // stop your app's default button behavior
+
+    // Grab values from your visible fields (by placeholder text)
+    const get = s => document.querySelector(s)?.value?.trim() || '';
+    const vals = {
+      name:    get('input[placeholder="Name"]'),
+      email:   get('input[placeholder="Email"]'),
+      phone:   get('input[placeholder="Phone"]'),
+      suburb:  get('input[placeholder="Suburb"]'),
+      message: get('textarea[placeholder="How can we help?"]'),
+    };
+
+    // Fill hidden Netlify form
+    Object.entries(vals).forEach(([k,v]) => {
+      const el = nf.querySelector(`[name="${k}"]`);
+      if (el) el.value = v;
+    });
+
+    // Submit to Netlify
+    try {
+      await fetch('/', { method: 'POST', body: new FormData(nf) });
+      alert('Thanks! We received your enquiry.');
+      // Optional: clear your visible inputs here if you want
+    } catch {
+      alert('Sorry, something went wrong. Please try again.');
+    }
+  });
+});
+</script>
+
+
   </body>
 </html>

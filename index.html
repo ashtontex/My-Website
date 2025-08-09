@@ -10,98 +10,146 @@
   <body class="min-h-screen bg-white">
     <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 bg-white border px-3 py-2 rounded-md shadow">Skip to content</a>
     <div id="root"></div>
-<script>
-<script>
-(function () {
-  // Poll until the SPA renders the black "Send enquiry" button
-  function waitForButton() {
-    const btn = [...document.querySelectorAll('button, input[type="submit"]')]
-      .find(el => (el.textContent || el.value || '').trim().toLowerCase() === 'send enquiry');
-    if (!btn) return setTimeout(waitForButton, 200);
-    hookUp(btn);
-  }
 
-  function hookUp(btn) {
-    // Stop native form submits / redirects
-    btn.setAttribute('type', 'button');
-    btn.closest('form')?.addEventListener('submit', e => e.preventDefault());
-
-    // Find inputs near the button
-    let container = btn;
-    for (let i = 0; i < 6 && container; i++) {
-      container = container.parentElement;
-      if (container && container.querySelectorAll('input, textarea').length >= 3) break;
-    }
-    if (!container) container = document;
-
-    const q = s => container.querySelector(s);
-    const inputs = [...container.querySelectorAll('input, textarea')];
-
-    const nameEl   = q('input[placeholder*="name" i]')   || inputs[0];
-    const emailEl  = q('input[type="email"]') || q('input[placeholder*="email" i]') || inputs[1];
-    const phoneEl  = q('input[type="tel"]')   || q('input[placeholder*="phone" i]') || inputs[2];
-    const suburbEl = q('input[placeholder*="suburb" i]') || inputs[3];
-    const msgEl    = q('textarea') || inputs.find(x => x.tagName === 'TEXTAREA');
-
-    // Hidden Netlify form
-    const nf = document.createElement('form');
-    nf.name = 'enquiry';
-    nf.method = 'POST';
-    nf.setAttribute('data-netlify', 'true');
-    nf.style.display = 'none';
-    nf.innerHTML = `
-      <input type="hidden" name="form-name" value="enquiry">
-      <input name="name">
-      <input name="email">
-      <input name="phone">
-      <input name="suburb">
+    <!-- Static hidden Netlify form so it's picked up at build time -->
+    <form name="enquiry" method="POST" data-netlify="true" netlify-honeypot="bot-field" style="display:none;">
+      <input type="hidden" name="form-name" value="enquiry" />
+      <p style="display:none;">
+        <label>Don’t fill this out if you’re human: <input name="bot-field" /></label>
+      </p>
+      <input name="name" />
+      <input name="email" />
+      <input name="phone" />
+      <input name="suburb" />
       <textarea name="message"></textarea>
-    `;
-    document.body.appendChild(nf);
+    </form>
 
-    // Submit handler
-    async function submitToNetlify(e) {
-      e?.preventDefault?.();
+    <script>
+    (function () {
+      const spinnerSVG = `
+        <svg style="width:16px;height:16px;margin-right:8px;vertical-align:middle;" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="35" stroke="currentColor" stroke-width="10" fill="none" stroke-dasharray="164" stroke-linecap="round">
+            <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      `;
 
-      const vals = {
-        name:   nameEl?.value?.trim()   || '',
-        email:  emailEl?.value?.trim()  || '',
-        phone:  phoneEl?.value?.trim()  || '',
-        suburb: suburbEl?.value?.trim() || '',
-        message: msgEl?.value?.trim()   || '',
-      };
-
-      // Fill hidden form
-      Object.entries(vals).forEach(([k, v]) => {
-        const el = nf.querySelector(`[name="${k}"]`);
-        if (el) el.value = v;
-      });
-
-      try {
-        await fetch('/', { method: 'POST', body: new FormData(nf) });
-        // Replace the visible form area with a nice confirmation
-        const target = container.querySelector('form') || container;
-        target.innerHTML = '<p style="padding:12px;border-radius:8px;background:#ecfdf5;border:1px solid #86efac;">✅ Thanks! We’ll be in touch within one business day.</p>';
-      } catch (err) {
-        alert('Sorry, something went wrong. Please try again.');
-        console.error(err);
+      // Poll until the SPA renders the black "Send enquiry" button
+      function waitForButton() {
+        const btn = [...document.querySelectorAll('button, input[type="submit"]')]
+          .find(el => (el.textContent || el.value || '').trim().toLowerCase() === 'send enquiry');
+        if (!btn) return setTimeout(waitForButton, 200);
+        hookUp(btn);
       }
-    }
 
-    // Click + Enter key submit
-    btn.addEventListener('click', submitToNetlify);
-    container.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
-        submitToNetlify(e);
+      function hookUp(btn) {
+        // Remember original content to restore on error
+        if (btn.tagName === 'BUTTON') {
+          btn.dataset.original = btn.innerHTML;
+        } else {
+          btn.dataset.original = btn.value || 'Send enquiry';
+        }
+
+        // Stop native form submits / redirects
+        btn.setAttribute('type', 'button');
+        btn.closest('form')?.addEventListener('submit', e => e.preventDefault());
+
+        // Find inputs near the button
+        let container = btn;
+        for (let i = 0; i < 6 && container; i++) {
+          container = container.parentElement;
+          if (container && container.querySelectorAll('input, textarea').length >= 3) break;
+        }
+        if (!container) container = document;
+
+        const q = s => container.querySelector(s);
+        const inputs = [...container.querySelectorAll('input, textarea')];
+
+        const nameEl   = q('input[placeholder*="name" i]')   || inputs[0];
+        const emailEl  = q('input[type="email"]') || q('input[placeholder*="email" i]') || inputs[1];
+        const phoneEl  = q('input[type="tel"]')   || q('input[placeholder*="phone" i]') || inputs[2];
+        const suburbEl = q('input[placeholder*="suburb" i]') || inputs[3];
+        const msgEl    = q('textarea') || inputs.find(x => x.tagName === 'TEXTAREA');
+
+        // Use the static hidden Netlify form declared above
+        const nf = document.querySelector('form[name="enquiry"]');
+
+        function setSendingState() {
+          btn.disabled = true;
+          btn.style.opacity = '0.8';
+          btn.setAttribute('aria-busy', 'true');
+          btn.setAttribute('aria-live', 'polite');
+
+          if (btn.tagName === 'BUTTON') {
+            btn.innerHTML = spinnerSVG + 'Sending...';
+          } else {
+            btn.value = 'Sending...';
+          }
+        }
+
+        function resetButton() {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.removeAttribute('aria-busy');
+
+          if (btn.tagName === 'BUTTON') {
+            btn.innerHTML = btn.dataset.original || 'Send enquiry';
+          } else {
+            btn.value = btn.dataset.original || 'Send enquiry';
+          }
+        }
+
+        async function submitToNetlify(e) {
+          e?.preventDefault?.();
+
+          const vals = {
+            name:   nameEl?.value?.trim()   || '',
+            email:  emailEl?.value?.trim()  || '',
+            phone:  phoneEl?.value?.trim()  || '',
+            suburb: suburbEl?.value?.trim() || '',
+            message: msgEl?.value?.trim()   || '',
+          };
+
+          if (!vals.name || !vals.email) {
+            alert('Please add your name and email.');
+            return;
+          }
+
+          // Fill hidden form
+          Object.entries(vals).forEach(([k, v]) => {
+            const el = nf.querySelector(`[name="${k}"]`);
+            if (el) el.value = v;
+          });
+
+          try {
+            // Immediate visual feedback
+            setSendingState();
+
+            await fetch('/', { method: 'POST', body: new FormData(nf) });
+
+            // Small delay for nicer feel, then swap to confirmation
+            setTimeout(() => {
+              const target = container.querySelector('form') || container;
+              target.innerHTML = '<p style="padding:12px;border-radius:8px;background:#ecfdf5;border:1px solid #86efac;">✅ Thanks! We’ll be in touch within one business day.</p>';
+            }, 400);
+          } catch (err) {
+            console.error(err);
+            alert('Sorry, something went wrong. Please try again.');
+            resetButton();
+          }
+        }
+
+        // Click + Enter key submit
+        btn.addEventListener('click', submitToNetlify);
+        container.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+            submitToNetlify(e);
+          }
+        });
       }
-    });
-  }
 
-  // Kick things off
-  waitForButton();
-})();
-
-</script>
-
+      waitForButton();
+    })();
+    </script>
   </body>
 </html>

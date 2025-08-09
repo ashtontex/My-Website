@@ -10,5 +10,20 @@
   <body class="min-h-screen bg-white">
     <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 bg-white border px-3 py-2 rounded-md shadow">Skip to content</a>
     <div id="root"></div>
+ <form name="enquiry" method="POST" data-netlify="true">
+  <input type="hidden" name="form-name" value="enquiry" />
+  <p>
+    <label>Name <input type="text" name="name" required></label>
+  </p>
+  <p>
+    <label>Email <input type="email" name="email" required></label>
+  </p>
+  <p>
+    <label>Message <textarea name="message" required></textarea></label>
+  </p>
+  <p>
+    <button type="submit">Send enquiry</button>
+  </p>
+</form>
   </body>
 </html>
